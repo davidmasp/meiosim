@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 rand_distr = "0.4.3"
+noodles ={ version = "0.63.0", features = ["vcf"] }
+indexmap = "2.2.2"
