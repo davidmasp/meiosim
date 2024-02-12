@@ -10,3 +10,7 @@ rand = "0.8.5"
 rand_distr = "0.4.3"
 noodles ={ version = "0.63.0", features = ["vcf"] }
 indexmap = "2.2.2"
+clap = { version = "4.5.0", features = ["derive"] }
+log = "0.4.20"
+simplelog = "0.12.1"
+regex = "1.5.4"

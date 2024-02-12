@@ -7,6 +7,7 @@ use rand_distr::{Poisson, Distribution};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::collections::HashMap;
 
 pub struct Crossover {
     pub seqname: String,
@@ -160,12 +161,12 @@ impl RecombinationMapGenome {
             recombination_maps,
         }
     }
-    pub fn generate_genome_cx(&self) -> Vec<Crossover> {
-        let mut vec_out = Vec::new();
-        for i in 0..self.recombination_maps.len() {
-            let cx = self.recombination_maps[i].generate_cx();
-            vec_out.extend(cx);
+    pub fn generate_genome_cx(&self) -> HashMap<String, Vec<Crossover>> {
+        let mut map_out = HashMap::new();
+        for recombination_map in &self.recombination_maps {
+            let cx = recombination_map.generate_cx();
+            map_out.insert(recombination_map.seqname.clone(), cx);
         }
-        vec_out
+        map_out
     }
 }
