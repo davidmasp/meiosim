@@ -14,6 +14,18 @@ recombination maps for Human (GRCh38) in the
 The maps need to be in
 [PLINK map format](https://zzz.bwh.harvard.edu/plink/data.shtml#map).
 
+In the debug case, we also need to change the chromosome names like so:
+
+```
+files=$(ls debug/recombmaps/*.map)
+mkdir -p debug/recombmaps2
+for i in $files;
+do
+    ibase=$(basename $i)
+    awk '{print("chr"$0)}' $i > debug/recombmaps2/${ibase}
+done
+```
+
 ### VCF collections from 1KG
 
 The vcf collections (aka 1 multisample-VCF per chromosome)
@@ -23,7 +35,14 @@ are available from [1000genomes EBI ftp site](http://ftp.1000genomes.ebi.ac.uk/v
 <details>
 
 ```
-./target/debug/meiosim -r sdfjsd -v dsjhfkds -d dsjhfkjs -p SAMPLE1 -P SAMPLE2 --prefix test --seed 2 -f 10
+time ./target/debug/meiosim \
+    -r debug/recombmaps2/ \
+    -v debug/vcfcollectionssmall/   \
+    -d ntt \
+    -p NA21123 \
+    -P NA20752 \
+    --prefix testout \
+    --seed 3 -f 10 --genome debug/hg38.genome
 ```
 
 </details>

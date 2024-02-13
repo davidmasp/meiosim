@@ -8,12 +8,33 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::collections::HashMap;
+use std::cmp;
 
+#[derive(Clone, Debug, Eq, Default, Hash)]
 pub struct Crossover {
     pub seqname: String,
     pub position: u64
 }
 
+impl PartialOrd for Crossover {
+    fn partial_cmp(&self, other: &Crossover) -> Option<cmp::Ordering> {
+        Some(other.cmp(self))
+    }
+}
+
+impl Ord for Crossover {
+    fn cmp(&self, other: &Crossover) -> cmp::Ordering {
+        self.position.cmp(&other.position)
+    }
+}
+
+impl PartialEq for Crossover {
+    fn eq(&self, other: &Crossover) -> bool {
+        self.position == other.position && self.seqname == other.seqname
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd, Default)]
 pub struct RecombinationSegment {
     pub seqname: String,
     pub position: u64,
@@ -141,11 +162,11 @@ impl RecombinationMap {
 }
 
 impl RecombinationMapGenome {
-    pub fn from_path(path: &str, extension: &str) -> Self {
+    pub fn from_path(path: &str, extension: &str, recom_header: bool) -> Self {
         let rm_filenames = list_files_in_directory(path, extension).unwrap();
         let recombination_maps = rm_filenames.iter()
             .map(|rm_filename|{
-                let recomb_map_result = RecombinationMap::parse_to_recombination_map(rm_filename, true);
+                let recomb_map_result = RecombinationMap::parse_to_recombination_map(rm_filename, recom_header);
                 let recomb_map = match recomb_map_result {
                     Ok(rm) => {
                         rm
@@ -161,11 +182,13 @@ impl RecombinationMapGenome {
             recombination_maps,
         }
     }
-    pub fn generate_genome_cx(&self) -> HashMap<String, Vec<Crossover>> {
+    pub fn generate_genome_cx(&self, parentid: String) -> HashMap<String, Vec<(String, Crossover)>> {
         let mut map_out = HashMap::new();
         for recombination_map in &self.recombination_maps {
-            let cx = recombination_map.generate_cx();
-            map_out.insert(recombination_map.seqname.clone(), cx);
+            let mut cx = recombination_map.generate_cx();
+            cx.sort();
+            let cxout: Vec<(String, Crossover)> = cx.iter().cloned().map(|c| (parentid.clone(), c.clone())).collect();
+            map_out.insert(recombination_map.seqname.clone(), cxout);
         }
         map_out
     }

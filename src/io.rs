@@ -15,7 +15,7 @@ pub struct SampleOut {
 
 impl SampleOut {
     fn new(prefix: &String, p1name: &String, p2name: &String, name: &String) -> Self {
-        let targetvcfout = format!("{}/{}_{}_{}_meiosimvariants.vcf.gz", prefix, name, p1name, p2name);
+        let targetvcfout = format!("{}/{}_{}_{}_meiosimvariants.txt", prefix, name, p1name, p2name);
         Self {
             name: name.clone(),
             parent1: p1name.clone(),

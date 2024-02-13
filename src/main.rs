@@ -7,11 +7,11 @@ mod io;
 mod workflows;
 use workflows::wrk_generate_offspring;
 use io::FamilyOut;
-use noodles::vcf::header::record::value::map::info;
 use recombination::RecombinationMapGenome;
 
 use clap::Parser;
-use log::{info, warn};
+use log::info;
+// use log::warn;
 use simplelog;
 
 #[derive(Parser, Debug)]
@@ -19,6 +19,8 @@ use simplelog;
 struct Args {
     #[arg(long, help = "Sets the level of verbosity")]
     verbose: bool,
+    #[arg(long, help = "Do recombination map use header?")]
+    recomheader: bool,
     #[arg(short, long, value_name = "FOLDER", help = "Sets the folder path to recombination maps")]
     recombination: String,
     #[arg(short = 'v', long, value_name = "FOLDER", help = "Sets the folder path to VCF collection of population variants")]
@@ -35,9 +37,12 @@ struct Args {
     seed: u32,
     #[arg(short = 'f', long, value_name = "SIZE", help = "Sets the family size of the generated family tree")]
     familysize: u8,
+    #[arg(short = 'g', long, value_name = "GENOME", help = "Sets the genome file")]
+    genome: String,
 }
 
 fn main() {
+   
     let opts: Args = Args::parse();
 
     // You can then use these options in your program
@@ -48,6 +53,8 @@ fn main() {
     let sample1 = opts.parent1;
     let sample2 = opts.parent2;
     let prefix = opts.prefix;
+    let recom_header = opts.recomheader;
+    let genome_file = opts.genome;
 
     let _ = simplelog::SimpleLogger::init(simplelog::LevelFilter::Info, simplelog::Config::default());
     if verbose{
@@ -68,12 +75,20 @@ fn main() {
     }
 
     // load recombination maps
-    let genome_recomb_map = RecombinationMapGenome::from_path(&recomb_maps, "map");
+    let genome_recomb_map = RecombinationMapGenome::from_path(&recomb_maps, "map", recom_header);
     let mut popvars = variants::VCFCollection::from_path(&pop_variants, "gz", verbose);
 
+    let genome_hash = utils::read_genome_file(genome_file);
+    
     for i in 0..family.samples.len() {
         let sample = &family.samples[i];
-        wrk_generate_offspring(&sample, &genome_recomb_map, &mut popvars, &denovo_variants, verbose);
+        wrk_generate_offspring(&sample,
+                               &genome_recomb_map,
+                               &mut popvars,
+                               &denovo_variants,
+                               verbose,
+                               &genome_hash,
+                                8);
     }
   // PARAMS
 }
