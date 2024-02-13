@@ -45,7 +45,8 @@ impl VCF {
             pos_from: u64, 
             pos_to: u64, 
             verbose: bool,
-            output_file: &String) -> (){
+            output_writter: &mut File,
+            usedwgsimformat: bool) -> (){
         // s.as_bytes()
         let fpath = self.file_path.clone();
         let mut bcf = bcf::IndexedReader::from_path(fpath)
@@ -56,9 +57,6 @@ impl VCF {
 
         let chr_id = header.name2rid(chromosome.as_bytes()).expect("Chromosome not found");
         bcf.fetch(chr_id, pos_from, Some(pos_to)).expect("Cannot fetch the region");
-
-        // open the file
-        let mut outputfile = File::create(output_file).expect("Unable to create file");
 
         let mut current_record = bcf.empty_record();
 
@@ -105,7 +103,12 @@ impl VCF {
                 if parent1_gt_hapl == &(0 as i32) && parent2_gt_hapl == &(0 as i32) {
                     continue;
                 } else {
-                    write!(outputfile, "{}\t{}\t{:?}\t{}|{}\n", chromosome, pos1based, alleles, parent1_gt_hapl, parent2_gt_hapl).expect("Unable to write to file");
+                    if usedwgsimformat {
+                        let line_out = compose_dwgsim_format(&chromosome, pos1based, alleles, parent1_gt_hapl, parent2_gt_hapl);
+                        write!(output_writter, "{}", line_out).expect("Unable to write to file");    
+                    } else {
+                        panic!("No other format implemented yet");
+                    }
                 }
             }
         }
@@ -150,5 +153,53 @@ fn extract_value(allele: &GenotypeAllele) -> Option<&i32> {
         GenotypeAllele::Phased(value) => Some(value),
         GenotypeAllele::UnphasedMissing => None,
         GenotypeAllele::PhasedMissing => None,
+    }
+}
+
+fn compose_dwgsim_format(chromosome: &String, pos1based: i64, mut alleles: Vec<String>, parent1_gt_hapl: &i32, parent2_gt_hapl: &i32) -> String {
+    // see here https://github.com/nh13/DWGSIM/blob/main/docs/03_Simulating_Reads.md#output-mutations-file
+    // I am unsure what the strand means here,
+    // I am assuming all SNPs are strand 1 means from parent1 and 2 from parent 2.
+    // the value 3 means that the SNP is homozygous, so that makes sense so far
+    let mut string_out = String::new();
+    if parent1_gt_hapl == &0 || parent2_gt_hapl == &0 && parent1_gt_hapl != parent2_gt_hapl{
+        // this would be the case where the variant is heterozygous, as not 0|0 should be reported.
+        // then we have to define the strand as 1 or 2.
+        let strand: String;
+        if parent1_gt_hapl == &0 {
+            strand = "1".to_string();
+        } else {
+            strand = "2".to_string();
+        }
+        let ref_all = alleles[0].clone();
+        // this is a bit stupid!
+        let _ = alleles.sort();
+        let iupac_code = get_iupac_representation(&alleles[0], &alleles[1]);
+        string_out = format!("{}\t{}\t{}\t{}\t{}\n", chromosome, pos1based, ref_all, iupac_code, strand);
+    } else if parent1_gt_hapl == &1 && parent2_gt_hapl == &1 {
+        // this would be the case where the SNP is homozygous, strand does not matter     
+        let ref_all = &alleles[0];
+        let alt_all = &alleles[1];
+        string_out = format!("{}\t{}\t{}\t{}\t3\n", chromosome, pos1based, ref_all, alt_all);
+    }
+    string_out
+}
+
+pub fn get_iupac_representation(x: &str, y: &str) -> String {
+    // see here https://genome.ucsc.edu/goldenPath/help/iupac.html
+    if x == "A" && y == "G" {
+        "R".to_string()
+    } else if x == "C" && y == "T" {
+        "Y".to_string()
+    } else if x == "C" && y == "G" {
+        "S".to_string()
+    } else if x == "A" && y == "T" {
+        "W".to_string()
+    } else if x == "G" && y == "T" {
+        "K".to_string()
+    } else if x == "A" && y == "C" {
+        "M".to_string()
+    } else {
+        panic!("IUPAC code not found for {} and {}", x, y);
     }
 }

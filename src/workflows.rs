@@ -7,9 +7,16 @@ use crate::variants::VCFCollection;
 use log::info;
 use rand::Rng;
 
-// use rayon::prelude::*;
+use std::fs::File;
 
-pub fn wrk_generate_offspring(sample: &SampleOut, genome_recomb_map: &RecombinationMapGenome, popvars: &VCFCollection, _denovo: &str, verbose: bool, contig_size: &HashMap<String, u64>, _n_threads: usize) -> () {
+pub fn wrk_generate_offspring(sample: &SampleOut,
+        genome_recomb_map: &RecombinationMapGenome,
+        popvars: &VCFCollection,
+        _denovo: &str,
+        verbose: bool,
+        contig_size: &HashMap<String,
+        u64>,
+        use_dwgsim: bool) -> () {
     
     if verbose {
         info!("Generating offspring for: {}", sample.name);
@@ -99,6 +106,9 @@ pub fn wrk_generate_offspring(sample: &SampleOut, genome_recomb_map: &Recombinat
             info!("Haplotypes: {:?}", all_hap);
         }
 
+        let mut outputfile = File::create(&sample.targetvcfout).expect("Unable to create file");
+
+
         all_hap.iter().for_each(|(hap1, hap2, pos_from, pos_to)| {
                 if verbose {
                     info!("Getting records for {}:{}-{}", chr, pos_from, pos_to);
@@ -112,7 +122,8 @@ pub fn wrk_generate_offspring(sample: &SampleOut, genome_recomb_map: &Recombinat
                     *pos_from,
                     *pos_to,
                     verbose,
-                    &sample.targetvcfout);
+                    &mut outputfile,
+                    use_dwgsim);
                 });
     }
     ()

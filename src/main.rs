@@ -39,6 +39,8 @@ struct Args {
     familysize: u8,
     #[arg(short = 'g', long, value_name = "GENOME", help = "Sets the genome file")]
     genome: String,
+    #[arg(long, help = "Output in DWGSIM format")]
+    dwgsim: bool,
 }
 
 fn main() {
@@ -55,6 +57,11 @@ fn main() {
     let prefix = opts.prefix;
     let recom_header = opts.recomheader;
     let genome_file = opts.genome;
+    let use_dwgsim_format = opts.dwgsim;
+
+    if !use_dwgsim_format {
+        panic!("No other formats are implemented yet")
+    }
 
     let _ = simplelog::SimpleLogger::init(simplelog::LevelFilter::Info, simplelog::Config::default());
     if verbose{
@@ -88,7 +95,7 @@ fn main() {
                                &denovo_variants,
                                verbose,
                                &genome_hash,
-                                8);
+                               use_dwgsim_format,);
     }
   // PARAMS
 }

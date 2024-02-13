@@ -35,14 +35,37 @@ are available from [1000genomes EBI ftp site](http://ftp.1000genomes.ebi.ac.uk/v
 <details>
 
 ```
-time ./target/debug/meiosim \
+mkdir -p debug/vcfcollectionssmall2
+files=$(ls debug/vcfcollectionssmall/*.vcf.gz)
+for i in $files;
+do
+    ibase=$(basename $i)
+    bcftools view -s NA21123,NA20752 $i | bcftools norm -m +snps | bcftools -o debug/vcfcollectionssmall2/$ibase
+    bcftools index -t debug/vcfcollectionssmall2/$ibase
+done
+```
+
+
+```
+time ./target/release/meiosim \
     -r debug/recombmaps2/ \
-    -v debug/vcfcollectionssmall/   \
+    -v debug/vcfcollectionssmall2/   \
     -d ntt \
     -p NA21123 \
     -P NA20752 \
     --prefix testout \
-    --seed 3 -f 10 --genome debug/hg38.genome
+    --seed 3 -f 5 --genome debug/hg38.genome --dwgsim
+```
+
+With the whole vcf the time is: 1m30s, with only the two parents, the time is: 10s
+
+We also need to normalize the SNPs otherwise it's giving us problems
+down the road. This essentially means that we are removing multiallelic
+variants.
+
+```
+mutationfile=testout/sib0_NA21123_NA20752_meiosimvariants.txt
+dwgsim -m ${mutationfile} -o 1 -c 0 -C 10 -R 0.0 smallgenome.fa outsib0
 ```
 
 </details>
