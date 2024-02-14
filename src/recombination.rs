@@ -2,6 +2,8 @@
 use crate::utils::list_files_in_directory;
 
 use rand::Rng;
+use rand::rngs::StdRng;
+
 use rand_distr::{Poisson, Distribution};
 
 use std::fs::File;
@@ -65,12 +67,7 @@ impl RecombinationSegment {
             centimorgan: 0.0,
         }
     }
-    pub fn sample_from_segment(&self, next_segment: &RecombinationSegment) -> u8 {
-        // is this okay? 
-        // this could come from outside the function but I think there
-        // is implications for parall. processing
-        let mut rng = rand::thread_rng();
-
+    pub fn sample_from_segment(&self, next_segment: &RecombinationSegment, rng: &mut StdRng) -> u8 {
         if self.centimorgan == next_segment.centimorgan {
             return 0;
         }
@@ -79,16 +76,15 @@ impl RecombinationSegment {
         let cxlambda = cmdistance * 0.01;
         //println!("lambda: {}", cxlambda);
         let poi = Poisson::new(cxlambda).unwrap();
-        let recombination_count = poi.sample(&mut rng);
+        let recombination_count = poi.sample(rng);
         let recombination_count_u8: u8 = recombination_count as u8;
         recombination_count_u8
     }
-    pub fn get_cx_position(&self, next_segment: &RecombinationSegment, recombination_count: u8) -> Vec<u64> {
-        let mut rng = rand::thread_rng();
+    pub fn get_cx_position(&self, next_segment: &RecombinationSegment, recombination_count: u8, rnd: &mut StdRng) -> Vec<u64> {
         let mut positions = Vec::new();
-
+        //println!("{}",seedref);
         for _ in 0..recombination_count {
-            let pos_inst = rng.gen_range(self.position..next_segment.position);
+            let pos_inst = rnd.gen_range(self.position..next_segment.position);
             positions.push(pos_inst);
         }
         positions
@@ -137,7 +133,7 @@ impl RecombinationMap {
 
         Ok(recombination_map)
     }
-    pub fn generate_cx(&self) -> Vec<Crossover>{
+    pub fn generate_cx(&self, rng_cx: &mut StdRng) -> Vec<Crossover>{
         let mut vec_out = Vec::new();
         for i in 0..self.segments.len() {
             let next_segment_id = i + 1;
@@ -145,11 +141,14 @@ impl RecombinationMap {
                 continue;
             }
             let next_segment = &self.segments[next_segment_id];
-            let ncx = self.segments[i].sample_from_segment(next_segment);
+            let ncx = self.segments[i].sample_from_segment(next_segment, rng_cx);
             if ncx == 0 {
                 continue;
             } else {
-                let pos_cx = self.segments[i].get_cx_position(next_segment, ncx);
+                let pos_cx = self.segments[i]
+                    .get_cx_position(next_segment,
+                                     ncx,
+                                     rng_cx);
                 let cx_inst = Crossover {
                     seqname: self.segments[i].seqname.clone(),
                     position: pos_cx[0],
@@ -182,10 +181,10 @@ impl RecombinationMapGenome {
             recombination_maps,
         }
     }
-    pub fn generate_genome_cx(&self, parentid: String) -> HashMap<String, Vec<(String, Crossover)>> {
+    pub fn generate_genome_cx(&self, parentid: String, rng_cx: &mut StdRng) -> HashMap<String, Vec<(String, Crossover)>> {
         let mut map_out = HashMap::new();
         for recombination_map in &self.recombination_maps {
-            let mut cx = recombination_map.generate_cx();
+            let mut cx = recombination_map.generate_cx(rng_cx);
             cx.sort();
             let cxout: Vec<(String, Crossover)> = cx.iter().cloned().map(|c| (parentid.clone(), c.clone())).collect();
             map_out.insert(recombination_map.seqname.clone(), cxout);

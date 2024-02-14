@@ -11,16 +11,19 @@ pub struct SampleOut {
     pub parent1: String,
     pub parent2: String,
     pub targetvcfout: String,
+    pub targetbedout: String,
 }
 
 impl SampleOut {
     fn new(prefix: &String, p1name: &String, p2name: &String, name: &String) -> Self {
         let targetvcfout = format!("{}/{}_{}_{}_meiosimvariants.txt", prefix, name, p1name, p2name);
+        let targetbedout = format!("{}/{}_{}_{}_haplotypes.bed", prefix, name, p1name, p2name);
         Self {
             name: name.clone(),
             parent1: p1name.clone(),
             parent2: p2name.clone(),
             targetvcfout,
+            targetbedout
         }
     }
 }

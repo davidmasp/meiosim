@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::collections::HashMap;
 use std::path::Path;
+use std::io::Write;
 
 pub fn list_files_in_directory(input_folder: &str, extension: &str) -> io::Result<Vec<String>> {
     let mut file_names = Vec::new();
@@ -78,5 +79,10 @@ pub fn read_genome_file(file_path: String) -> HashMap<String, u64> {
         contig_size.insert(contig, size);
     }
     contig_size
+}
+
+pub fn push_haps_to_bed(hap1: &usize, hap2: &usize, chr: &String, pos_from: &u64, pos_to: &u64, outputfile_bed: &mut File) -> () {
+    let lineout = format!("{}\t{}\t{}\t{}\t{}\n", chr, pos_from, pos_to, hap1, hap2);
+    write!(outputfile_bed, "{}", lineout).expect("Unable to write to file");
 }
 

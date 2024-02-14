@@ -3,8 +3,12 @@ use std::collections::HashMap;
 
 use crate::io::SampleOut;
 use crate::recombination::RecombinationMapGenome;
-use crate::variants::VCFCollection;
+use crate::variants::{self, VCFCollection};
+use crate::utils::push_haps_to_bed;
+
 use log::info;
+
+use rand::rngs::StdRng;
 use rand::Rng;
 
 use std::fs::File;
@@ -12,22 +16,29 @@ use std::fs::File;
 pub fn wrk_generate_offspring(sample: &SampleOut,
         genome_recomb_map: &RecombinationMapGenome,
         popvars: &VCFCollection,
-        _denovo: &str,
+        denovo: &String,
         verbose: bool,
         contig_size: &HashMap<String,
         u64>,
-        use_dwgsim: bool) -> () {
+        use_dwgsim: bool,
+        seeded_rng: &mut StdRng) -> () {
     
     if verbose {
         info!("Generating offspring for: {}", sample.name);
     }
 
     let cx_parent1 =
-        genome_recomb_map.generate_genome_cx("parent1".to_string());
+        genome_recomb_map.generate_genome_cx("parent1".to_string(),
+                    seeded_rng);
     let cx_parent2 = 
-        genome_recomb_map.generate_genome_cx("parent2".to_string());
+        genome_recomb_map.generate_genome_cx("parent2".to_string(),
+                     seeded_rng);
+        
+    let mut chr_vector = popvars.vcfs.keys().collect::<Vec<&String>>();
+    chr_vector.sort();
+    let mut outputfile = File::create(&sample.targetvcfout).expect("Unable to create file");
+    let mut outputfile_bed = File::create(&sample.targetbedout).expect("Unable to create file");
 
-    let chr_vector = popvars.vcfs.keys().collect::<Vec<&String>>();
     for chr in chr_vector {
 
         let contig_size = contig_size.get(chr).unwrap().clone();
@@ -57,9 +68,12 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
         // this is per chromosome
         // need to 
         // 1. choose a random haplotype for parent1
-        let initial_haplotype_parent1: usize = rand::thread_rng().gen_range(0..2);
+        // I did test this and it seems to be different value for each generation kinda thing
+        // I did remove the generator from the chromosome so it will be different
+        // in each chromosome
+        let initial_haplotype_parent1: usize = seeded_rng.gen_range(0..2);
         // 2. choose a random haplotype for parent2
-        let initial_haplotype_parent2: usize = rand::thread_rng().gen_range(0..2);
+        let initial_haplotype_parent2: usize = seeded_rng.gen_range(0..2);
 
         // 3. combine cx from both parents, need to get a (hap1, hap2, position)
         let mut all_hap: Vec<(usize, usize, u64, u64)> = Vec::new();
@@ -106,13 +120,13 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
             info!("Haplotypes: {:?}", all_hap);
         }
 
-        let mut outputfile = File::create(&sample.targetvcfout).expect("Unable to create file");
-
-
         all_hap.iter().for_each(|(hap1, hap2, pos_from, pos_to)| {
                 if verbose {
                     info!("Getting records for {}:{}-{}", chr, pos_from, pos_to);
                 }
+
+                push_haps_to_bed(hap1, hap2, chr, pos_from, pos_to, &mut outputfile_bed);
+            
                 vcf_obj.get_records_two_parents_from_to(
                     &sample.parent1,
                     &sample.parent2,
@@ -126,6 +140,13 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
                     use_dwgsim);
                 });
     }
+
+    // get the DNM and add them to the file:
+    variants::flush_dnm_to_file(&mut outputfile, 
+            denovo, 
+            verbose,
+            seeded_rng,);
+
     ()
 }
 

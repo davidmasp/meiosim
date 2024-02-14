@@ -15,6 +15,10 @@ use bcf::record::GenotypeAllele;
 use log::warn;
 use log::info;
 
+use rand::Rng;
+use rand::rngs::StdRng;
+
+
 pub struct VCF {
     pub file_path: String,
     pub seqname: String,
@@ -68,16 +72,9 @@ impl VCF {
                     https://github.com/nh13/DWGSIM/blob/main/docs/03_Simulating_Reads.md#output-mutations-file
              */
             let alleles = from_vu8_to_string(current_record.alleles());
-            let alleles_len: Vec<usize>= alleles.iter()
-                .map(|allele| {allele.len()})
-                .collect();
-            let any_greater_than_one = alleles_len.iter().any(|&len| len > 1);
-            if alleles.len() != 2{
-                if verbose {
-                    warn!("Skipping record at {}:{} because it's multiallelic", chromosome, pos);
-                }
-                continue; 
-            } else if any_greater_than_one{
+
+            let issnp = from_alleles_to_issnp(&alleles);
+            if !issnp {
                 if verbose {
                     warn!("Skipping record at {}:{} because it's not SNP/SNV", chromosome, pos);
                 }
@@ -203,3 +200,62 @@ pub fn get_iupac_representation(x: &str, y: &str) -> String {
         panic!("IUPAC code not found for {} and {}", x, y);
     }
 }
+
+pub fn flush_dnm_to_file(output_writter: &mut File, dnm: &String, verbose: bool, rng_dnm: &mut StdRng) -> () {
+    
+    // is this dumb?
+    let dnm_reader1 = bcf::Reader::from_path(dnm)
+            .expect("Cannot open the file");
+    let header = dnm_reader1.header();
+
+    let mut dnm_reader = bcf::Reader::from_path(dnm)
+            .expect("Cannot open the file");
+
+    dnm_reader.records().into_iter()
+        .for_each(|x|{
+            let record = x.unwrap();
+            let pos = record.pos(); //  0-based position
+            let pos1based = pos + 1;
+            let chrom_u8 = Vec::from(header.rid2name(record.rid().unwrap()).unwrap());
+            let chrom = String::from_utf8(chrom_u8).unwrap();
+            let alleles = from_vu8_to_string(record.alleles());
+
+            let issnp = from_alleles_to_issnp(&alleles);
+            if !issnp {
+                if verbose {
+                    warn!("Skipping record at {}:{} because it's not SNP/SNV", chrom, pos);
+                }
+                return;
+            }
+
+            // I am forcing them to be "heterozygous" but
+            // the parent of choice is "random"
+            
+            let gts = if rng_dnm.gen_range(0..2) == 0 { (0, 1) } else { (1, 0) };
+        
+            let line_out = compose_dwgsim_format(
+                        &chrom,
+                        pos1based,
+                        alleles,
+                        &gts.0, 
+                        &gts.1);
+            write!(output_writter, "{}", line_out).expect("Unable to write to file");    
+        });
+        ()
+}
+
+fn from_alleles_to_issnp(alleles: &Vec<String>) -> bool {
+    let alleles_len: Vec<usize>= alleles.iter()
+        .map(|allele| {allele.len()})
+        .collect();
+    let any_greater_than_one = alleles_len.iter().any(|&len| len > 1);
+
+    if alleles.len() != 2{
+        false
+    } else if any_greater_than_one{
+        false
+    } else {
+        true
+    }
+}
+

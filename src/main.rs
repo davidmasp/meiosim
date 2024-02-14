@@ -1,5 +1,4 @@
 
-
 mod variants;
 mod recombination;
 mod utils;
@@ -13,6 +12,9 @@ use clap::Parser;
 use log::info;
 // use log::warn;
 use simplelog;
+
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -34,7 +36,7 @@ struct Args {
     #[arg(long, value_name = "PREFIX", help = "Sets the prefix string for the output")]
     prefix: String,
     #[arg(long, value_name = "SEED", help = "Sets the seed")]
-    seed: u32,
+    seed: u64,
     #[arg(short = 'f', long, value_name = "SIZE", help = "Sets the family size of the generated family tree")]
     familysize: u8,
     #[arg(short = 'g', long, value_name = "GENOME", help = "Sets the genome file")]
@@ -44,7 +46,7 @@ struct Args {
 }
 
 fn main() {
-   
+
     let opts: Args = Args::parse();
 
     // You can then use these options in your program
@@ -58,6 +60,7 @@ fn main() {
     let recom_header = opts.recomheader;
     let genome_file = opts.genome;
     let use_dwgsim_format = opts.dwgsim;
+    let seed_value: u64 = opts.seed;
 
     if !use_dwgsim_format {
         panic!("No other formats are implemented yet")
@@ -84,10 +87,10 @@ fn main() {
     // load recombination maps
     let genome_recomb_map = RecombinationMapGenome::from_path(&recomb_maps, "map", recom_header);
     let mut popvars = variants::VCFCollection::from_path(&pop_variants, "gz", verbose);
-
     let genome_hash = utils::read_genome_file(genome_file);
     
-    for i in 0..family.samples.len() {
+    let mut rng: StdRng = StdRng::seed_from_u64(seed_value);
+    for i in 0..family.samples.len() { 
         let sample = &family.samples[i];
         wrk_generate_offspring(&sample,
                                &genome_recomb_map,
@@ -95,7 +98,8 @@ fn main() {
                                &denovo_variants,
                                verbose,
                                &genome_hash,
-                               use_dwgsim_format,);
+                               use_dwgsim_format,
+                               &mut rng);
     }
   // PARAMS
 }
