@@ -201,7 +201,7 @@ pub fn get_iupac_representation(x: &str, y: &str) -> String {
     }
 }
 
-pub fn flush_dnm_to_file(output_writter: &mut File, dnm: &String, verbose: bool, rng_dnm: &mut StdRng) -> () {
+pub fn flush_dnm_to_file(output_writter: &mut File, truepos_writter: &mut File, dnm: &String, verbose: bool, rng_dnm: &mut StdRng) -> () {
     
     // is this dumb?
     let dnm_reader1 = bcf::Reader::from_path(dnm)
@@ -239,7 +239,8 @@ pub fn flush_dnm_to_file(output_writter: &mut File, dnm: &String, verbose: bool,
                         alleles,
                         &gts.0, 
                         &gts.1);
-            write!(output_writter, "{}", line_out).expect("Unable to write to file");    
+            write!(output_writter, "{}", line_out).expect("Unable to write to file");
+            write!(truepos_writter, "{}\t{}\n", chrom, pos1based).expect("Unable to write to file");
         });
         ()
 }

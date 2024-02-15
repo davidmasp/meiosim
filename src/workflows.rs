@@ -38,6 +38,7 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
     chr_vector.sort();
     let mut outputfile = File::create(&sample.targetvcfout).expect("Unable to create file");
     let mut outputfile_bed = File::create(&sample.targetbedout).expect("Unable to create file");
+    let mut output_truednm = File::create(&sample.targetdnmout).expect("Unable to create file");
 
     for chr in chr_vector {
 
@@ -143,10 +144,10 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
 
     // get the DNM and add them to the file:
     variants::flush_dnm_to_file(&mut outputfile, 
+            &mut output_truednm,
             denovo, 
             verbose,
             seeded_rng,);
-
     ()
 }
 
