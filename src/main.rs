@@ -15,6 +15,7 @@ use simplelog;
 
 use rand::SeedableRng;
 use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -90,12 +91,23 @@ fn main() {
     let genome_hash = utils::read_genome_file(genome_file);
     
     let mut rng: StdRng = StdRng::seed_from_u64(seed_value);
+
+    let dnm_files = utils::list_files_in_directory(
+                    &denovo_variants,
+                    "vcf").unwrap();
+
+    // randomly select at least family.samples.len() files
+    let selected_dnm_files: Vec<String> = dnm_files
+            .choose_multiple(&mut rng,
+                     family.samples.len()).cloned().collect();
+
     for i in 0..family.samples.len() { 
         let sample = &family.samples[i];
+        let dnm_file = &selected_dnm_files[i];
         wrk_generate_offspring(&sample,
                                &genome_recomb_map,
                                &mut popvars,
-                               &denovo_variants,
+                               &dnm_file,
                                verbose,
                                &genome_hash,
                                use_dwgsim_format,
