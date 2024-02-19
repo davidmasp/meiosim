@@ -155,7 +155,7 @@ fn main() {
                 info!("Prefix: {}", prefix);
             }
 
-            let outputfilename = format!("{}_variants.txt", prefix);
+            let outputfilename = format!("{}_meiosimvariants.txt", prefix);
             wrk_format_vcf(
                 vcf_file,
                 &outputfilename,
