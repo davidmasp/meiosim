@@ -82,11 +82,12 @@ impl RecombinationSegment {
     }
     pub fn get_cx_position(&self, next_segment: &RecombinationSegment, recombination_count: u8, rnd: &mut StdRng) -> Vec<u64> {
         let mut positions = Vec::new();
-        //println!("{}",seedref);
         for _ in 0..recombination_count {
             let pos_inst = rnd.gen_range(self.position..next_segment.position);
             positions.push(pos_inst);
         }
+        // here we need to order the positions, also added a test to check
+        positions.sort();
         positions
     }
 }
@@ -192,3 +193,31 @@ impl RecombinationMapGenome {
         map_out
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
+    use super::RecombinationSegment;
+
+    #[test]
+    fn test_get_cx_position() {
+        let mut rng: StdRng = StdRng::seed_from_u64(42);
+        let seg1: RecombinationSegment = RecombinationSegment::new("chr1".to_string(), 0, 0.0);
+        let seg2 = RecombinationSegment::new("chr1".to_string(), 100000, 10.0);
+        let positions = seg1.get_cx_position(&seg2, 5, &mut rng);
+        println!("{:?}", positions);
+
+        // Check that the positions vector is not empty
+        assert!(!positions.is_empty(), "Positions vector is empty");
+
+        // Check that the positions are ordered
+        let mut last_position = positions[0];
+        for &position in positions.iter().skip(1) {
+            assert!(position >= last_position, "Positions are not ordered");
+            last_position = position;
+        }
+    }
+}
+
