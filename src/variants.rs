@@ -4,6 +4,7 @@ use crate::utils::list_files_in_directory;
 use crate::utils::capture_chromosome_from_file_name;
 use crate::utils::from_vu8_to_string;
 
+use core::panic;
 use std::fs::File;
 use std::io::Write;
 
@@ -202,7 +203,6 @@ pub fn get_iupac_representation(x: &str, y: &str) -> String {
 }
 
 pub fn flush_dnm_to_file(output_writter: &mut File, truepos_writter: &mut File, dnm: &String, verbose: bool, rng_dnm: &mut StdRng) -> () {
-    
     // is this dumb?
     let dnm_reader1 = bcf::Reader::from_path(dnm)
             .expect("Cannot open the file");
@@ -241,6 +241,66 @@ pub fn flush_dnm_to_file(output_writter: &mut File, truepos_writter: &mut File, 
                         &gts.1);
             write!(output_writter, "{}", line_out).expect("Unable to write to file");
             write!(truepos_writter, "{}\t{}\n", chrom, pos1based).expect("Unable to write to file");
+        });
+        ()
+}
+
+pub fn flush_vcf_to_file(output_writter: &mut File, vcfname: &String, verbose: bool) -> () {
+    // is this dumb?
+    let vcf_reader1 = bcf::Reader::from_path(vcfname)
+            .expect("Cannot open the file");
+    let header = vcf_reader1.header();
+
+    let mut vcf_reader = bcf::Reader::from_path(vcfname)
+            .expect("Cannot open the file");
+
+    vcf_reader.records().into_iter()
+        .for_each(|x|{
+            let record = x.unwrap();
+            let pos = record.pos(); //  0-based position
+            let pos1based = pos + 1;
+            let chrom_u8 = Vec::from(header.rid2name(record.rid().unwrap()).unwrap());
+            let chrom = String::from_utf8(chrom_u8).unwrap();
+            let alleles = from_vu8_to_string(record.alleles());
+
+            let issnp = from_alleles_to_issnp(&alleles);
+            if !issnp {
+                if verbose {
+                    warn!("Skipping record at {}:{} because it's not SNP/SNV", chrom, pos);
+                }
+                return;
+            }
+            // currently we are assuming the vcf is uni-sample here as I
+            // have it implemented it like this in the pipeline,
+            // this can be improved by adding a specific sample.
+            // I think however this way is easier to parall.
+            let gts_raw: bcf::record::Genotype = record.genotypes().unwrap().get(0);
+            let gt1_ga: &GenotypeAllele = gts_raw.get(0).unwrap();
+            let gt2_ga : &GenotypeAllele = gts_raw.get(1).unwrap();
+
+            // the first record should always be unphased
+            // https://docs.rs/rust-htslib/latest/rust_htslib/bcf/record/struct.Genotypes.html#implementations
+            let gt1_int = match gt1_ga {
+                GenotypeAllele::Unphased(value) => value,
+                GenotypeAllele::Phased(_value) => panic!("problem with phasing??"),
+                GenotypeAllele::UnphasedMissing => panic!("Missing GT error"),
+                GenotypeAllele::PhasedMissing => panic!("Phased missing GT error"),
+            };
+
+            let gt2_int = match gt2_ga {
+                GenotypeAllele::Unphased(_value) => panic!("problem with phasing??"),
+                GenotypeAllele::Phased(value) => value,
+                GenotypeAllele::UnphasedMissing => panic!("Missing GT error"),
+                GenotypeAllele::PhasedMissing => panic!("Phased missing GT error"),
+            };
+
+            let line_out = compose_dwgsim_format(
+                        &chrom,
+                        pos1based,
+                        alleles,
+                        &gt1_int, 
+                        &gt2_int);
+            write!(output_writter, "{}", line_out).expect("Unable to write to file");
         });
         ()
 }

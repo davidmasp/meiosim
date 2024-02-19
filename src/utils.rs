@@ -66,9 +66,9 @@ pub fn from_vu8_to_string(x: Vec<&[u8]>)-> Vec<String> {
 }
 
 
-pub fn read_genome_file(file_path: String) -> HashMap<String, u64> {
+pub fn read_genome_file(file_path: &String) -> HashMap<String, u64> {
     let mut contig_size = HashMap::new();
-    let input_file = File::open(&Path::new(&file_path)).unwrap();
+    let input_file = File::open(&Path::new(file_path)).unwrap();
     let reader = io::BufReader::new(input_file);
     let lines = reader.lines();
     for line in lines {

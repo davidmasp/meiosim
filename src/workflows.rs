@@ -151,5 +151,8 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
     ()
 }
 
-
+pub fn wrk_format_vcf(outputfilename: &String, vcf_file: &String, verbose: bool) -> () {
+    let mut outputfile = File::create(&outputfilename).expect("Unable to create file");
+    variants::flush_vcf_to_file(&mut outputfile, vcf_file, verbose);
+}
 
