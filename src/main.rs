@@ -157,8 +157,8 @@ fn main() {
 
             let outputfilename = format!("{}_variants.txt", prefix);
             wrk_format_vcf(
-                vcf_file,
                 &outputfilename,
+                vcf_file,
                 verbose
             )
         }
