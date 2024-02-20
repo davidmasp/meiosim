@@ -65,6 +65,11 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
         let mut all_cx = Vec::new();
         all_cx.extend(cx_chr_inst_p1);
         all_cx.extend(cx_chr_inst_p2);
+        
+        all_cx.sort_by(|a, b| {
+            // a cmp b should be ascending order
+            a.1.cmp(&b.1)
+        } );
 
         // this is per chromosome
         // need to 
@@ -82,7 +87,6 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
         let mut last_position: u64 = 0;
 
         let mut current_hap1 = initial_haplotype_parent1.clone();
-        
         let mut current_hap2 = initial_haplotype_parent2.clone();
 
         if verbose {
@@ -93,6 +97,10 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
         // i am pretty sure if the length of cx is 0, this won't run, that is ok
         all_cx.iter().for_each(|(parent, crossover)| {
             let inst_position = crossover.position;
+            info!("{}: {}", parent, inst_position);
+            if last_position > inst_position {
+                panic!("Crossover positions are not sorted");
+            }
             all_hap.push((current_hap1.clone(),
                           current_hap2.clone(),
                           last_position,

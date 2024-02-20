@@ -20,7 +20,7 @@ pub struct Crossover {
 
 impl PartialOrd for Crossover {
     fn partial_cmp(&self, other: &Crossover) -> Option<cmp::Ordering> {
-        Some(other.cmp(self))
+        Some(self.cmp(other))
     }
 }
 
@@ -143,6 +143,7 @@ impl RecombinationMap {
             }
             let next_segment = &self.segments[next_segment_id];
             let ncx = self.segments[i].sample_from_segment(next_segment, rng_cx);
+            let ncx_usize = ncx as usize;
             if ncx == 0 {
                 continue;
             } else {
@@ -150,11 +151,13 @@ impl RecombinationMap {
                     .get_cx_position(next_segment,
                                      ncx,
                                      rng_cx);
-                let cx_inst = Crossover {
-                    seqname: self.segments[i].seqname.clone(),
-                    position: pos_cx[0],
-                };
-                vec_out.push(cx_inst);
+                for posid in 0..ncx_usize {
+                    let cx_inst = Crossover {
+                        seqname: self.segments[i].seqname.clone(),
+                        position: pos_cx[posid],
+                    };
+                    vec_out.push(cx_inst);
+                }
             }
         }
         vec_out
@@ -186,6 +189,7 @@ impl RecombinationMapGenome {
         let mut map_out = HashMap::new();
         for recombination_map in &self.recombination_maps {
             let mut cx = recombination_map.generate_cx(rng_cx);
+            // these should not be needed actually
             cx.sort();
             let cxout: Vec<(String, Crossover)> = cx.iter().cloned().map(|c| (parentid.clone(), c.clone())).collect();
             map_out.insert(recombination_map.seqname.clone(), cxout);
@@ -217,6 +221,28 @@ mod tests {
         for &position in positions.iter().skip(1) {
             assert!(position >= last_position, "Positions are not ordered");
             last_position = position;
+        }
+    }
+
+    #[test]
+    fn test_crossover_order() {
+        let mut rng: StdRng = StdRng::seed_from_u64(44);
+        let seg1 = RecombinationSegment::new("chr1".to_string(), 0, 0.0);
+        let seg2 = RecombinationSegment::new("chr1".to_string(), 100000, 500.0);
+        let seg3 = RecombinationSegment::new("chr1".to_string(), 200000, 1000.0);
+        // tested with this seed this test sould give more than 1 crossover
+
+        let recom_map = super::RecombinationMap::new("chr1".to_string(), vec![seg1, seg2, seg3]);
+        let crossovers = recom_map.generate_cx(&mut rng);
+        // Check that the crossovers vector is not empty
+        assert!(!crossovers.is_empty(), "Crossovers vector is empty");
+        assert!(!crossovers.len() > 1, "Crossovers vector is equal to 1");
+        println!("{:?}", crossovers);
+        // Check that the crossovers are in descending order
+        let mut last_position = crossovers[0].position;
+        for crossover in crossovers.iter().skip(1) {
+            assert!(crossover.position > last_position, "Crossovers are not in ascending order");
+            last_position = crossover.position;
         }
     }
 }
