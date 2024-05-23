@@ -24,11 +24,16 @@ Types of changes:
 
 ### Added
 
+- Adding a option to simulate a simple recombination with a specific number of cross-overs per chromosome (some organisms have tight regulations, e.g. C. elegans)
 - A test to control that cross-overs are returned sorted per segment
 
 ### Fixed
 
 - Fixed order of crossovers
+
+### Removed
+
+- The option to not export in dwgsim format as it was not implemented, and likely wont
 
 ## [0.1.0] - 2024-02-18
 

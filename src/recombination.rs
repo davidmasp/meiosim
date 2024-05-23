@@ -198,11 +198,34 @@ impl RecombinationMapGenome {
     }
 }
 
+pub fn generate_simple_recombination(csize: &HashMap<String, u64>, parentid: String, rng_cx: &mut StdRng, cxcount: u8) -> HashMap<String, Vec<(String, Crossover)>> {
+    let mut map_out = HashMap::new();
+    for (seqname, size) in csize.iter() {
+        // size here means the size of the chromosome
+        // and seqname should be the names of the chromosome
+        // we can generate two recombination segments, the cM values do not
+        // matter as they won't be used.
+        // we cannot use 0 here because then i think it could generate a 0 (although unlikely)
+        let segment1 = RecombinationSegment::new(seqname.clone(), 1, 0.0);
+        let segment2 = RecombinationSegment::new(seqname.clone(), *size, 0.0);
+        let positions = segment1.get_cx_position(&segment2, cxcount, rng_cx);
+        
+        let cxout: Vec<(String, Crossover)> = positions.iter().map(|pos| {
+            (parentid.clone(), Crossover {
+                seqname: seqname.clone(),
+                position: *pos,
+            })
+        }).collect();
+        map_out.insert(seqname.clone(), cxout);
+    }
+    map_out
+}
 
 #[cfg(test)]
 mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
+    use rand::Rng;
     use super::RecombinationSegment;
 
     #[test]
@@ -244,6 +267,19 @@ mod tests {
             assert!(crossover.position > last_position, "Crossovers are not in ascending order");
             last_position = crossover.position;
         }
+    }
+
+    #[test]
+    fn test_rng_0() {
+        let mut rng: StdRng = StdRng::seed_from_u64(44);
+        let pos1 = &rng.gen_range(0..1);
+        let pos1prime = &rng.gen_range(0..1);
+        let pos2 = &rng.gen_range(1..2);
+        let pos3 = &rng.gen_range(2..3);
+        assert!(*pos1 == 0, "pos1 is not 1");
+        assert!(*pos2 == 1, "pos1 is not 2");
+        assert!(*pos3 == 2, "pos1 is not 3");
+        assert!(*pos1prime == 0, "pos1prime is not 0");
     }
 }
 

@@ -41,7 +41,9 @@ struct Main  {
     #[arg(long, help = "Do recombination map use header?")]
     recomheader: bool,
     #[arg(short, long, value_name = "FOLDER", help = "Sets the folder path to recombination maps")]
-    recombination: String,
+    recombination: Option<String>,
+    #[arg(short = 's', long, value_name = "CX", help = "Sets the number of crossovers for simple recombination, if not using recombination maps")]
+    simplerecombination: Option<u8>,
     #[arg(short = 'v', long, value_name = "FOLDER", help = "Sets the folder path to VCF collection of population variants")]
     population: String,
     #[arg(short, long, value_name = "FOLDER", help = "Sets the folder path to VCF collection of denovo variants")]
@@ -54,7 +56,7 @@ struct Main  {
     prefix: String,
     #[arg(long, value_name = "SEED", help = "Sets the seed")]
     seed: u64,
-    #[arg(short = 'f', long, value_name = "SIZE", help = "Sets the family size of the generated family tree")]
+    #[arg(short = 'f', long, value_name = "SI  ZE", help = "Sets the family size of the generated family tree")]
     familysize: u8,
     #[arg(short = 'g', long, value_name = "GENOME", help = "Sets the genome file")]
     genome: String,
@@ -77,7 +79,7 @@ fn main() {
     match &cli.command {
         Commands::Main(opts) => {
             let verbose = opts.verbose;
-            let recomb_maps = &opts.recombination; // debug/recombmaps
+            // let recomb_maps = &opts.recombination; // debug/recombmaps
             let pop_variants = &opts.population; // debug/vcfcollections
             let denovo_variants = &opts.denovo; // debug/dnmcollections
             let sample1 = &opts.parent1;
@@ -88,7 +90,6 @@ fn main() {
             let seed_value: u64 = opts.seed;
 
             if verbose{
-                info!("Recombination maps folder: {}", recomb_maps);
                 info!("Population variants folder: {}", pop_variants);
                 info!("Denovo variants folder: {}", denovo_variants);
                 info!("Parent1: {}", sample1);
@@ -104,11 +105,43 @@ fn main() {
                 });
             }
 
-            // load recombination maps
-            let genome_recomb_map = RecombinationMapGenome::from_path(
-                    recomb_maps,
-                    "map",
-                    recom_header);
+            let genome_recomb_map = match &opts.recombination {
+                Some(recomb_maps) => {
+                    // load recombination maps
+                    info!("Recombination maps folder: {}", recomb_maps);
+                    let genome_recomb_map = RecombinationMapGenome::from_path(
+                            recomb_maps,
+                            "map",
+                            recom_header);
+                    Some(genome_recomb_map)
+                },
+                None => {
+                    if verbose {
+                        info!("Using simple recombination mode, no recombination map supplied.");
+                    }
+                    None
+                }
+            };
+            // this needs to be a reference, because I need it to be 
+            // present in this main scope to be used multiple times
+            let grecom_ref = genome_recomb_map.as_ref();
+
+            // i think this is not needed to be reference because it
+            // implements copy trait
+            let simple_recom_ncx = opts.simplerecombination;
+            match  opts.simplerecombination {
+                Some(simple_recombination) => {
+                    if verbose {
+                        info!("Simple recombination: {}", simple_recombination);
+                    }
+                },
+                None => {
+                    if verbose {
+                        info!("Simple recombination: None");
+                    }
+                }
+            }
+    
             let mut popvars = variants::VCFCollection::from_path(&pop_variants, "gz", verbose);
             let genome_hash = utils::read_genome_file(genome_file);
             
@@ -127,7 +160,8 @@ fn main() {
                 let sample = &family.samples[i];
                 let dnm_file = &selected_dnm_files[i];
                 wrk_generate_offspring(&sample,
-                                    &genome_recomb_map,
+                                    grecom_ref,
+                                    simple_recom_ncx,
                                     &mut popvars,
                                     &dnm_file,
                                     verbose,

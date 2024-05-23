@@ -3,6 +3,8 @@ use std::collections::HashMap;
 
 use crate::io::SampleOut;
 use crate::recombination::RecombinationMapGenome;
+use crate::recombination::generate_simple_recombination;
+use crate::recombination::Crossover;
 use crate::variants::{self, VCFCollection};
 use crate::utils::push_haps_to_bed;
 
@@ -10,11 +12,11 @@ use log::info;
 
 use rand::rngs::StdRng;
 use rand::Rng;
-
 use std::fs::File;
 
 pub fn wrk_generate_offspring(sample: &SampleOut,
-        genome_recomb_map: &RecombinationMapGenome,
+        genome_recomb_map_opt: Option<&RecombinationMapGenome>,
+        simple_recombination_opt: Option<u8>,
         popvars: &VCFCollection,
         denovo: &String,
         verbose: bool,
@@ -25,12 +27,29 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
         info!("Generating offspring for: {}", sample.name);
     }
 
-    let cx_parent1 =
-        genome_recomb_map.generate_genome_cx("parent1".to_string(),
-                    seeded_rng);
-    let cx_parent2 = 
-        genome_recomb_map.generate_genome_cx("parent2".to_string(),
-                     seeded_rng);
+    let cx_parent1: HashMap<String, Vec<(String, Crossover)>> = match (genome_recomb_map_opt, simple_recombination_opt) {
+        (Some(genome_recomb_map), None) => {
+            genome_recomb_map.generate_genome_cx("parent1".to_string(), seeded_rng)
+        },
+        (None, Some(simple_recombination)) => {
+            generate_simple_recombination(contig_size, "parent1".to_string(), seeded_rng, simple_recombination)
+        },
+        _ => {
+            panic!("Invalid combination of parameters");
+        }
+    };
+        
+    let cx_parent2: HashMap<String, Vec<(String, Crossover)>> = match (genome_recomb_map_opt, simple_recombination_opt) {
+        (Some(genome_recomb_map), None) => {
+            genome_recomb_map.generate_genome_cx("parent2".to_string(), seeded_rng)
+        },
+        (None, Some(simple_recombination)) => {
+            generate_simple_recombination(contig_size, "parent2".to_string(), seeded_rng, simple_recombination)
+        },
+        _ => {
+            panic!("Invalid combination of parameters");
+        }   
+    };
         
     let mut chr_vector = popvars.vcfs.keys().collect::<Vec<&String>>();
     chr_vector.sort();
