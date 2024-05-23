@@ -18,7 +18,6 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
-
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -29,7 +28,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Main command to generate a family
+    /// Generates files that simulate offspring from two parents
     Main(Main),
     /// Support command to convert VCF to DWGSIM format
     Vcf2dwgsim(Vcf2dwgsim)
@@ -59,8 +58,6 @@ struct Main  {
     familysize: u8,
     #[arg(short = 'g', long, value_name = "GENOME", help = "Sets the genome file")]
     genome: String,
-    #[arg(long, help = "Output in DWGSIM format")]
-    dwgsim: bool,
 }
 
 #[derive(Args)]
@@ -88,12 +85,7 @@ fn main() {
             let prefix = &opts.prefix;
             let recom_header = opts.recomheader;
             let genome_file = &opts.genome;
-            let use_dwgsim_format = opts.dwgsim;
             let seed_value: u64 = opts.seed;
-
-            if !use_dwgsim_format {
-                panic!("No other formats are implemented yet")
-            }
 
             if verbose{
                 info!("Recombination maps folder: {}", recomb_maps);
@@ -140,7 +132,6 @@ fn main() {
                                     &dnm_file,
                                     verbose,
                                     &genome_hash,
-                                    use_dwgsim_format,
                                     &mut rng);
             }
         }

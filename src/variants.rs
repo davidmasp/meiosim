@@ -50,8 +50,7 @@ impl VCF {
             pos_from: u64, 
             pos_to: u64, 
             verbose: bool,
-            output_writter: &mut File,
-            usedwgsimformat: bool) -> (){
+            output_writter: &mut File) -> (){
         // s.as_bytes()
         let fpath = self.file_path.clone();
         let mut bcf = bcf::IndexedReader::from_path(fpath)
@@ -101,12 +100,8 @@ impl VCF {
                 if parent1_gt_hapl == &(0 as i32) && parent2_gt_hapl == &(0 as i32) {
                     continue;
                 } else {
-                    if usedwgsimformat {
-                        let line_out = compose_dwgsim_format(&chromosome, pos1based, alleles, parent1_gt_hapl, parent2_gt_hapl);
-                        write!(output_writter, "{}", line_out).expect("Unable to write to file");    
-                    } else {
-                        panic!("No other format implemented yet");
-                    }
+                    let line_out = compose_dwgsim_format(&chromosome, pos1based, alleles, parent1_gt_hapl, parent2_gt_hapl);
+                    write!(output_writter, "{}", line_out).expect("Unable to write to file");
                 }
             }
         }

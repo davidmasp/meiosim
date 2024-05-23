@@ -18,9 +18,7 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
         popvars: &VCFCollection,
         denovo: &String,
         verbose: bool,
-        contig_size: &HashMap<String,
-        u64>,
-        use_dwgsim: bool,
+        contig_size: &HashMap<String, u64>,
         seeded_rng: &mut StdRng) -> () {
     
     if verbose {
@@ -145,8 +143,7 @@ pub fn wrk_generate_offspring(sample: &SampleOut,
                     *pos_from,
                     *pos_to,
                     verbose,
-                    &mut outputfile,
-                    use_dwgsim);
+                    &mut outputfile);
                 });
     }
 

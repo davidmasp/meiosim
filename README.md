@@ -85,7 +85,8 @@ cd .. ## back to debug folder
 ### Finally runnning the tool!
 
 ```
-time ./target/release/meiosim \
+cargo install --path .
+meiosim \
     -r debug/recombmaps2/ \
     -v debug/vcfcollectionssmall2/   \
     -d debug/decode_DNMs/vcfs/Proband-1354.vcf \
@@ -93,8 +94,7 @@ time ./target/release/meiosim \
     -P NA20752 \
     --prefix testout \
     --seed 3 -f 5 \
-    --genome debug/hg38.genome \
-    --dwgsim
+    --genome debug/hg38.genome 
 ```
 
 With the whole vcf the time is: 1m30s, with only the two parents, the time is: 10s
