@@ -22,6 +22,8 @@ Types of changes:
 
 ## [Unreleased]
 
+## [0.2.0] - 2024-05-23
+
 ### Added
 
 - Adding a option to simulate a simple recombination with a specific number of cross-overs per chromosome (some organisms have tight regulations, e.g. C. elegans)
